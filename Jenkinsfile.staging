@@ -1,0 +1,17 @@
+pipeline {
+    agent any 
+    
+    stages {
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Iniciando o deploy para o ambiente de Staging...'
+                // Exemplo de como rodar um contêiner Docker. 
+                // precisa adaptar este passo ao seu método de deploy.
+                sh 'docker pull diegojustino1/pipeline_dev_ac2:latest'
+                sh 'docker stop meu-app-staging || true'
+                sh 'docker rm meu-app-staging || true'
+                sh 'docker run -d --name meu-app-staging -p 8081:8080 diegojustino1/pipeline_dev_ac2:latest'
+            }
+        }
+    }
+}
