@@ -30,7 +30,6 @@ public class Curso {
     private String titulo;
     private double notaFinal;
 
-    // Construtor extra apenas com os campos essenciais (opcional)
     public Curso(IdentificacaoCurso identificacao, String titulo, double notaFinal) {
         this.identificacao = identificacao;
         this.titulo = titulo;
