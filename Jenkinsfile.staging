@@ -4,13 +4,21 @@ pipeline {
     stages {
         stage('Deploy to Staging') {
             steps {
-                echo 'Iniciando o deploy para o ambiente de Staging...'
-                // Exemplo de como rodar um contêiner Docker. 
-                // precisa adaptar este passo ao seu método de deploy.
-                sh 'docker pull diegojustino1/pipeline_dev_ac2:latest'
-                sh 'docker stop meu-app-staging || true'
-                sh 'docker rm meu-app-staging || true'
-                sh 'docker run -d --name meu-app-staging -p 8081:8080 diegojustino1/pipeline_dev_ac2:latest'
+                echo 'Iniciando o deploy da imagem no ambiente de Staging...'
+                
+                // 1. Puxa a imagem mais recente do Docker Hub
+                bat 'docker pull diegojustino1/pipeline_dev_ac2:latest'
+                
+                // 2. Tenta parar e remover o contêiner antigo
+                // O uso de '||' (OR) é específico do shell Linux e não funciona bem no BAT. 
+                // Usaremos o comando 'cmd /C' para executar comandos com falha
+                bat 'cmd /C "docker stop pipeline-staging"'
+                bat 'cmd /C "docker rm pipeline-staging"'
+                
+                // 3. Roda o novo contêiner
+                bat 'docker run -d --name pipeline-staging -p 8081:8080 diegojustino1/pipeline_dev_ac2:latest'
+                
+                echo 'Deploy de Staging concluído na porta 8081.'
             }
         }
     }
