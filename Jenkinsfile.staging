@@ -1,25 +1,76 @@
 pipeline {
     agent any 
     
+    environment {
+        DOCKER_IMAGE = 'diegojustino1/pipeline_dev_ac2:latest'
+        
+        // --- CONFIGURAÇÃO GCP ---
+        PROD_VM_IP = 'COLOQUE_O_IP_EXTERNO_DO_GOOGLE_AQUI' 
+        PROD_VM_USER = 'szlucasytsz'
+    }
+    
     stages {
-        stage('Deploy to Staging') {
+        stage('Build & Package') {
             steps {
-                echo 'Iniciando o deploy da imagem no ambiente de Staging...'
+                echo '--- 1. Construindo Artefato ---'
+                sh 'chmod +x mvnw'
+                // Pula testes para agilizar, mas num cenário real removeríamos o -DskipTests
+                sh './mvnw clean package -DskipTests' 
                 
-                // 1. Puxa a imagem mais recente do Docker Hub
-                bat 'docker pull diegojustino1/pipeline_dev_ac2:latest'
+                echo '--- 2. Criando Imagem Docker ---'
+                sh "docker build -t ${DOCKER_IMAGE} ."
                 
-                // 2. Tenta parar e remover o contêiner antigo.
-                // O 'returnStatus: true' permite que o passo retorne um código de erro 
-                // (como quando o contêiner não existe) sem falhar o build.
-                bat(returnStatus: true, script: 'docker stop pipeline-staging')
-                bat(returnStatus: true, script: 'docker rm pipeline-staging')
-                
-                // 3. Roda o novo contêiner
-                bat 'docker run -d --name pipeline-staging -p 8081:8080 diegojustino1/pipeline_dev_ac2:latest'
-                
-                echo 'Deploy de Staging concluído na porta 8081.'
+                echo '--- 3. Enviando para Docker Hub ---'
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+                    sh "docker login -u $DOCKER_USER -p $DOCKER_PASS"
+                    sh "docker push ${DOCKER_IMAGE}"
+                }
             }
+        }
+
+        stage('Deploy Staging (Local Mac)') {
+            steps {
+                echo '--- 4. Deploy em Staging (Localhost:8081) ---'
+                sh "docker stop pipeline-staging || true"
+                sh "docker rm pipeline-staging || true"
+                // Roda na porta 8081 para não conflitar com nada
+                sh "docker run -d --name pipeline-staging -p 8081:8080 ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Approval Gate') {
+            steps {
+                script {
+                    // O Pipeline PAUSA aqui.
+                    // Você valida em http://localhost:8081/progresso/1
+                    // Se estiver OK, volta no Jenkins e clica em "Proceed"
+                    input message: 'Staging Validado? Autorizar Deploy em Produção (GCP)?'
+                }
+            }
+        }
+
+        stage('Deploy Production (GCP)') {
+            steps {
+                echo '--- 5. Conectando na Nuvem para Deploy ---'
+                sshagent(['azure-vm-ssh-key']) {
+                    // Conecta no Google Cloud e roda o container na porta 80 (Padrão Web)
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ${PROD_VM_USER}@${PROD_VM_IP} '
+                            docker pull ${DOCKER_IMAGE} &&
+                            (docker stop pipeline-prod || true) &&
+                            (docker rm pipeline-prod || true) &&
+                            docker run -d --name pipeline-prod -p 80:8080 --restart always ${DOCKER_IMAGE}
+                        '
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "--- SUCESSO COMPLETO ---"
+            echo "Acesse sua aplicação em: http://${PROD_VM_IP}/progresso/1"
         }
     }
 }

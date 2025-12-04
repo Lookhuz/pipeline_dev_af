@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  app-prod:
+    image: diegojustino1/pipeline_dev_ac2:latest
+    container_name: pipeline-prod
+    restart: always
+    ports:
+      - "80:8080" # Mapeia a porta 80 da VM para a 8080 do Container
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      # Variáveis de banco de dados devem ser injetadas aqui em um cenário real
