@@ -5,7 +5,7 @@ pipeline {
         DOCKER_IMAGE = 'diegojustino1/pipeline_dev_ac2:latest'
         
         // --- CONFIGURAÇÃO GCP ---
-        PROD_VM_IP = 'COLOQUE_O_IP_EXTERNO_DO_GOOGLE_AQUI' 
+        PROD_VM_IP = '34.59.203.159' 
         PROD_VM_USER = 'szlucasytsz'
     }
     
