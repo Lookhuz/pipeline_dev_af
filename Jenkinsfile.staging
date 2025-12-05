@@ -2,7 +2,7 @@ pipeline {
     agent any 
     
     environment {
-        DOCKER_IMAGE = 'diegojustino1/pipeline_dev_ac2:latest'
+        DOCKER_IMAGE = 'lookuz/pipeline_dev_ac2:latest'
         
         // --- CONFIGURAÇÃO GCP ---
         PROD_VM_IP = '34.59.203.159' 
